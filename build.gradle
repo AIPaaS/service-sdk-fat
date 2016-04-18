@@ -1,0 +1,99 @@
+apply plugin: "java"
+apply plugin: 'maven-publish'
+
+sourceCompatibility = 1.7
+version = "1.0"
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+    exclude group: 'log4j', module: 'log4j'
+    exclude group: "org.slf4j", module: "slf4j-log4j12"
+}
+
+repositories { maven{ url "http://10.1.228.199:18081/nexus/content/groups/public/"
+	} }
+
+ext {
+	moduleMode="";
+	moduleName="ipaas-sdk";
+//	moduleVersion="0.1"+moduleMode;
+	moduleVersion="0.2.1"+moduleMode;
+	publishUserName = "devadm"
+	publishUserPassword = "Devadm@1212"
+	publishSnapShotsURL="http://10.1.228.199:18081/nexus/content/repositories/snapshots/"
+	publishReleaseURL="http://10.1.228.199:18081/nexus/content/repositories/releases/"
+	builtBy="gradle 2.1"
+}
+
+group = 'com.ai'
+
+configurations {
+	provided
+	compile.extendsFrom provided
+}
+
+dependencies {
+	runtime "com.ai:ipaas-uac:0.2"+moduleMode
+	runtime "com.ai:ipaas-ccs:0.2"+moduleMode
+	runtime "com.ai:ipaas-dbs:0.2.1"+moduleMode
+	
+	runtime "com.ai:ipaas-dss:0.2"+moduleMode
+	
+//	runtime "com.ai:ipaas-mcs:0.1"+moduleMode
+	runtime "com.ai:ipaas-mcs:0.2"+moduleMode
+	runtime "com.ai:ipaas-mds:0.2.9"+moduleMode
+	
+	runtime "com.ai:ipaas-rcs:0.2-SNAPSHOT"+moduleMode
+	
+	runtime ("com.ai:ipaas-txs:0.3.0"+moduleMode){
+		exclude group: 'org.mongodb', module: 'mongo-java-driver'
+	}
+	runtime "com.ai:ipaas-ses:0.2.2"+moduleMode
+	runtime "com.ai:ipaas-des:0.2"+moduleMode
+
+}
+
+jar {
+	dependsOn configurations.compile
+//	dependsOn configurations.runtime
+	from {
+		configurations.compile.collect {
+			it.isDirectory() ? it : zipTree(it)
+		}
+		configurations.runtime.collect {
+			it.isDirectory() ? it : zipTree(it)
+		}
+	} {
+		exclude "META-INF/*.SF"
+		exclude "META-INF/*.DSA"
+		exclude "META-INF/*.RSA"
+		exclude "META-INF/LICENSE"
+	}
+}
+
+publish.dependsOn build
+
+publishing {
+	publications {
+		publishing.publications.create("${moduleName}", MavenPublication) {
+			groupId group
+			artifactId moduleName
+			version moduleVersion
+			artifact  jar
+		}
+	}
+	repositories {
+		maven {
+			credentials {
+				username = publishUserName
+				password = publishUserPassword
+			}
+			if(moduleVersion.endsWith('-SNAPSHOT')) {
+                url publishSnapShotsURL
+            } else {
+                url publishReleaseURL
+            }
+		}
+	}
+}
